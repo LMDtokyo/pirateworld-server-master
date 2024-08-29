@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+enum InventoryType {
+  Player
+  Guild
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int     @id @default(autoincrement())
+  login           String  @unique
+  password        String  @db.Text
+  email           String?
+  email_confirmed Boolean @default(false)
+  avatar_hash     String?
+  lvl             Int     @default(1)
+  hp              Int     @default(300)
+  exp             Int     @default(0)
+
+  resources     UserResources?
+  inventory     Inventory?
+  RefreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model UserResources {
+  userId Int  @id
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  real     Int @default(0)
+  doubloon Int @default(0)
+  wood     Int @default(0)
+  sugar    Int @default(0)
+  rum      Int @default(0)
+  clotch   Int @default(0)
+  iron     Int @default(0)
+  crystal  Int @default(0)
+
+  @@map("users_resources")
+}
+
+model RefreshToken {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token      String
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model ItemType {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+  color String?
+
+  items Item[]
+
+  @@map("item_types")
+}
+
+model Item {
+  name        String @id
+  label       String
+  description String @db.Text
+
+  typeId Int
+  type   ItemType @relation(fields: [typeId], references: [id])
+
+  weight         Int
+  sell_price     Int    @default(0)
+  max_stack_size Int
+  image          String
+
+  slots InventoryItems[]
+
+  @@map("items")
+}
+
+model Inventory {
+  id   Int           @id @default(autoincrement())
+  type InventoryType
+
+  ownerId Int  @unique
+  owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  size  Int              @default(24)
+  items InventoryItems[]
+
+  @@map("inventories")
+}
+
+model InventoryItems {
+  slot  Int
+  count Int
+
+  inventoryId Int
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  itemId String?
+  item   Item?   @relation(fields: [itemId], references: [name], onDelete: Cascade)
+
+  @@id([slot, inventoryId], name: "key")
+  @@map("inventory_items")
+}
