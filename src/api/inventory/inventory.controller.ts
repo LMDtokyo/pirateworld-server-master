@@ -2,6 +2,16 @@ import prisma from '../../database/index.js';
 import resolveStackItem from "../../helpers/calcStackSize.js";
 import type { Request, Response } from "express";
 
+interface ISlot {
+  name: string,
+  max_stack_size: string,
+  label: string,
+  description: string,
+  weight: number,
+  image: string,
+  sell_price: number
+}
+
 class InventoryController {
   async fetch(req: Request, res: Response) {
     const playerId = Number(req.jwt.id);
@@ -34,13 +44,14 @@ class InventoryController {
       return res.status(403).json({ error: 'Access Denied', error_message: 'У вас нет доступа к этому инвентарю' });
     }
 
-    inventory.items.map(slot => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //@ts-ignore
+    inventory.items.map((slot: { item: { image: string; }; }) => {
       if (slot.item) {
         slot.item.image = process.env.API_URL + `/public/items/${slot.item.image}`;
       }
     });
 
-    console.log(inventory);
 
     res.json({ ...inventory, slots: inventory.items, items: undefined });
   }
@@ -78,7 +89,7 @@ class InventoryController {
       return res.status(400).json({ error: 'Bad Request', error_message: `Слот ${to} недоступен для этого инвентаря` });
     }
 
-    if (!inventory.items.some(item => item.slot === from)) {
+    if (!inventory.items.some((item :  { slot: number; }) => item.slot === from)) {
       // мб не будет работать)) надо проверить будет потом
       console.warn(`Слот ${from} (from) пустой, инвентарь: (${inventory.type}) ${inventoryId}`);
       return res.status(400).json({ error: 'Bad Request', error_message: `Слот ${from} пустой` });
