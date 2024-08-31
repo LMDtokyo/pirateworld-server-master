@@ -16,24 +16,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id              Int     @id @default(autoincrement())
-  login           String  @unique
-  password        String  @db.Text
-  email           String?
-  email_confirmed Boolean @default(false)
-  avatar_hash     String?
-  lvl             Int     @default(1)
-  hp              Int     @default(300)
-  exp             Int     @default(0)
-
-  resources     UserResources?
-  inventory     Inventory?
-  RefreshTokens RefreshToken[]
-
-  @@map("users")
-}
-
 model UserResources {
   userId Int  @id
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -117,3 +99,160 @@ model InventoryItems {
   @@id([slot, inventoryId], name: "key")
   @@map("inventory_items")
 }
+
+
+model User {
+  id              Int        @id @default(autoincrement())
+  login           String     @unique
+  password        String
+  email           String?
+  email_confirmed Boolean    @default(false)
+  avatar_hash     String?
+  lvl             Int        @default(1)
+  hp              Int        @default(300)
+  exp             Int        @default(0)
+  mana            Int        @default(0)
+  userSkill       UserSkill? @relation(name: "UserSkillToUser", fields: [userSkillId], references: [id])
+  userSkillId     Int?       @unique
+  battlelog       BattleLog? @relation(name: "UserToBattleLog")
+  battle          Battle?    @relation(name: "UserToBattle")
+  resources     UserResources?
+  inventory     Inventory?
+  RefreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model Skill {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  type_id     String
+  power       Int //Сила навыка (например, урон или эффективность)
+  mobSkill    MobSkill?  @relation(name: "SkillToMobSkill")
+  userSkill   UserSkill? @relation(name: "UserSkillToSkill", fields: [userSkillId], references: [id])
+  userSkillId Int?       @unique
+  battlelog   BattleLog? @relation(name: "SkillToBattleLog")
+
+  @@map("skill")
+}
+
+model UserSkill {
+  id      Int    @id @default(autoincrement())
+  userId  Int
+  skillId Int
+  level   Int
+  skill   Skill? @relation(name: "UserSkillToSkill")
+  user    User?  @relation(name: "UserSkillToUser")
+
+  @@map("user_skill")
+}
+
+// Настройки мобов
+
+model Mob {
+  id          Int         @id @default(autoincrement())
+  name        String
+  health      BigInt
+  mana        BigInt        @default(0)
+  image       String?
+  mobskill    MobSkill?   @relation(name: "MobToMobSkill")
+  roommob     RoomMob?    @relation(name: "MobToRoomMob")
+  MobEntityes MobEntity[] @relation(name: "MobEntityToMob")
+  @@map("mob")
+}
+
+model MobSkill {
+  id      Int    @id @default(autoincrement())
+  mobId   Int?   @unique
+  skillId Int    @unique
+  level   Int //Уровень навыка
+  mob     Mob?   @relation(name: "MobToMobSkill", fields: [mobId], references: [id])
+  skill   Skill? @relation(name: "SkillToMobSkill", fields: [skillId], references: [id])
+
+  @@map("mob_skill")
+}
+
+// Комнаты доступные для боя
+
+model Room {
+  id           Int         @id @default(autoincrement())
+  order        Int
+  RoomMob      RoomMob?    @relation(name: "RoomMobToRoom")
+  battleareaId Int?
+  battlearea   BattleArea? @relation(name: "RoomToBattleArea", fields: [battleareaId], references: [id])
+
+  @@map("room")
+}
+
+// Мобы в этой комнате бой с ними идёт пока последоватльно потом формируется
+// в MobGroup
+
+model RoomMob {
+  id     Int  @id @default(autoincrement())
+  MobId  Int  @unique
+  roomId Int  @unique
+  mob    Mob  @relation(name: "MobToRoomMob", fields: [MobId], references: [id])
+  room   Room @relation(name: "RoomMobToRoom", fields: [roomId], references: [id])
+
+  @@map("room_bom")
+}
+
+model MobEntity {
+  id        Int        @id @default(autoincrement())
+  name      String?
+  health    BigInt
+  mana      BigInt
+  mobId     Int
+  mob       Mob        @relation(name: "MobEntityToMob", fields: [mobId], references: [id])
+  battleId  Int
+  battle    Battle     @relation(name: "MobEntityToBattle", fields: [battleId], references: [id])
+  battlelog BattleLog? @relation(name: "MobEntityToBattleLog")
+
+  @@map("mob_enity")
+}
+
+// Лог боя
+
+model BattleLog {
+  id          Int       @id @default(autoincrement())
+  timestamp   DateTime  @default(now())
+  battle      Battle    @relation(name: "BattleToBattleLog", fields: [battleId], references: [id])
+  battleId    Int
+  mobEntity   MobEntity @relation(name: "MobEntityToBattleLog", fields: [mobEntityId], references: [id])
+  mobEntityId Int       @unique
+  user        User      @relation(name: "UserToBattleLog", fields: [userId], references: [id])
+  userId      Int       @unique
+  skill       Skill?    @relation(name: "SkillToBattleLog", fields: [skillId], references: [id])
+  skillId     Int?      @unique
+  actionText  String
+
+  @@map("battle_log")
+}
+
+model BattleArea {
+  id       Int      @id @default(autoincrement())
+  name     String?
+  image    String?
+  level    Int?
+  isAcitve Int?
+  rooms    Room[]   @relation(name: "RoomToBattleArea")
+  battles  Battle[] @relation(name: "BattleToBattleArea")
+
+  @@map("battle_area_settings")
+}
+
+// На основании комнаты создаётся бой
+
+model Battle {
+  id           Int         @id @default(autoincrement())
+  battleareaId Int?
+  isActive     Boolean?
+  battlearea   BattleArea? @relation(name: "BattleToBattleArea", fields: [battleareaId], references: [id])
+  MobEntities  MobEntity[] @relation(name: "MobEntityToBattle")
+  battlelog    BattleLog[] @relation(name: "BattleToBattleLog")
+  user         User?       @relation(name: "UserToBattle", fields: [userId], references: [id])
+  userId       Int?        @unique
+  @@map("battle")
+}
+

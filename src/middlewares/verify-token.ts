@@ -13,8 +13,7 @@ export default (req: Request, res: Response, next: NextFunction) => {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET) as TokenInterface;
-    req.jwt = payload;
+    req.jwt = jwt.verify(token, process.env.JWT_SECRET) as TokenInterface;
 
     next();
   } catch (err) {
