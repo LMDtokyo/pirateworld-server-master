@@ -187,7 +187,7 @@ const items = [
 
 const main = async () => {
   console.log(`🌴 Start seeding items table.`);
-  await prisma.itemType.create({ data: { name: "test" } })
+  // await prisma.itemType.create({ data: { name: "test" } })
   await prisma.item.deleteMany();
 
   await prisma.item.createMany({

@@ -8,9 +8,24 @@ services:
       MYSQL_USER: letmegame
       MYSQL_PASSWORD: letmegame
     ports:
-      - "3303:3306"
+      - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - my_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: letmegame
+      PMA_USER: letmegame
+      PMA_PASSWORD: letmegame
+    ports:
+      - "2000:80"
+    depends_on:
+      - db
     networks:
       - my_network
   prisma:
