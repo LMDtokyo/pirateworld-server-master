@@ -1,0 +1,37 @@
+services:
+  db:
+    image: mysql:5.6
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: letmegame
+      MYSQL_DATABASE: letmegame
+      MYSQL_USER: letmegame
+      MYSQL_PASSWORD: letmegame
+    ports:
+      - "3303:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - my_network
+  prisma:
+    container_name: fucking_prisma
+    build: .
+    volumes:
+      - ../:/app
+    command:
+     "npm start"
+
+    environment:
+      DATABASE_URL: mysql://letmegame:letmegame@db:3306/letmegame
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    networks:
+      - my_network
+
+volumes:
+  db_data:
+
+networks:
+  my_network:

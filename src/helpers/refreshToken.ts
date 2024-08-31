@@ -9,7 +9,7 @@ export const revoke = (tokenId: number, userId: number) => {
     .then(() => {
       console.log(`Рефреш токен пользователя ${userId} был удален. (Token expired)`);
     })
-    .catch(err => {
+    .catch((err: string) => {
       console.error(`Ошибка при удалении рефреш токена \`${tokenId}\``, err);
     });
 };
