@@ -25,29 +25,35 @@ class AuthController {
   async signup(req: Request<null, null, { login: string; password: string; email: string }>, res: Response) {
     const { login, password, email } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { login } });
+    const existingUser = await prisma.user.findFirst({
+      where: { OR: [{ login }, { email }] }
+    });
 
-    if (user) {
+    if (existingUser) {
       return res.status(400).json({
-        error: 'Логин занят',
-        error_message: 'Пользователь с таким логином уже существует'
+        error: 'Conflict',
+        error_message: 'Пользователь с таким логином или email уже существует'
       });
     }
 
-    const avatars = readdirSync('./public/avatars').map(fileName => fileName.split('.')[0]);
+    const avatars = readdirSync('./public/avatars')
+        .filter(fileName => /\.(png|jpg|jpeg|webp)$/.test(fileName))
+        .map(fileName => fileName.split('.')[0]);
 
-    await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
         login,
         email,
-        avatar_hash: avatars[Math.floor(Math.random() * avatars.length)],
+        avatar_hash: avatars.length ? avatars[Math.floor(Math.random() * avatars.length)] : null,
         password: bcrypt.hashSync(password, 7),
         resources: { create: {} },
         inventory: { create: { type: 'Player' } }
       }
     });
 
-    res.status(201).json({ message: 'Пользователь был создан' });
+    const tokens = await issueTokens(newUser.id);
+
+    res.status(201).json(tokens);
   }
 
   async refresh(req: Request<null, null, { refresh_token: string }>, res: Response) {

@@ -2,12 +2,12 @@ import Joi from 'joi';
 
 const signinSchema = Joi.object<{ login: string; password: string }>({
   login: Joi.string().alphanum().min(4).max(16).required(),
-  password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9]{3,30}$'))
+  password: Joi.string().min(6).max(30).required()
 });
 
 const signupSchema = Joi.object<{ login: string; password: string; email: string }>({
   login: Joi.string().alphanum().min(4).max(16).required(),
-  password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9]{3,30}$')),
+  password: Joi.string().min(6).max(30).required(),
   email: Joi.string().email().required()
 });
 
