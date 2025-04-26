@@ -1,3 +1,4 @@
+// prisma/seeds/seed.js
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
@@ -17,39 +18,45 @@ const users = [
 ]
 
 const main = async () => {
-  console.log(`🌴 Start seeding users table.`)
+  console.log('🌴 Start seeding users table.')
 
   // Удаляем всё старое (по зависимостям)
   await prisma.refreshToken.deleteMany()
   await prisma.inventory.deleteMany()
   await prisma.userResources.deleteMany()
   await prisma.userSkill.deleteMany()
+  await prisma.skill.deleteMany()
   await prisma.user.deleteMany()
 
+  // Создаём навык для пользователя
+  const baseSkill = await prisma.skill.create({
+    data: {
+      name: 'Пиратская стрельба',
+      description: 'Увеличивает урон огнестрельного оружия',
+      type_id: 'combat',
+      power: 10
+    }
+  })
+
   for (const user of users) {
-    const createdSkill = await prisma.userSkill.create({
+    const createdUser = await prisma.user.create({
       data: {
-        skill_points: 0 // или что тебе нужно по умолчанию
+        ...user,
+        resources: { create: {} },
+        inventory: { create: { type: 'Player' } }
       }
     })
 
-    await prisma.user.create({
+    await prisma.userSkill.create({
       data: {
-        ...user,
-        userSkill: {
-          connect: { id: createdSkill.id }
-        },
-        resources: {
-          create: {}
-        },
-        inventory: {
-          create: { type: 'Player' }
-        }
+        userId: createdUser.id,
+        skillId: baseSkill.id,
+        level: 1
       }
     })
   }
 
-  console.log(`🌴 ${users.length} users created with inventory, resources, and skill.`)
+  console.log(`🌴 ${users.length} users created with inventory, resources, and skills.`)
 }
 
 main()

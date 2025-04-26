@@ -118,6 +118,7 @@ model User {
   resources       UserResources?
   inventory       Inventory?
   RefreshTokens   RefreshToken[]
+  last_active_at  DateTime?      @default(now())
 
   @@map("users")
 }
