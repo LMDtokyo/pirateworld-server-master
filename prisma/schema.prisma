@@ -68,9 +68,29 @@ model Item {
   max_stack_size Int
   image          String
 
-  slots InventoryItems[]
+  // 🎯 Новые бонусные поля:
+  bonusAttack          Int @default(0)
+  bonusDefense         Int @default(0)
+  bonusSpeed           Int @default(0)
+  bonusManeuverability Int @default(0)
+  bonusLuck            Int @default(0)
+  bonusRepairSpeed     Int @default(0)
+
+  slots         InventoryItems[]
+  UserEquipment UserEquipment[]
 
   @@map("items")
+}
+
+model UserEquipment {
+  id     Int    @id @default(autoincrement())
+  userId Int
+  itemId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [name], onDelete: Cascade)
+
+  @@map("users_equipment")
 }
 
 model Inventory {
@@ -101,38 +121,56 @@ model InventoryItems {
 }
 
 model User {
-  id              Int            @id @default(autoincrement())
-  login           String         @unique
+  id              Int     @id @default(autoincrement())
+  login           String  @unique
   password        String
   email           String?
-  email_confirmed Boolean        @default(false)
+  email_confirmed Boolean @default(false)
   avatar_hash     String?
-  lvl             Int            @default(1)
-  hp              Int            @default(300)
-  exp             Int            @default(0)
-  mana            Int            @default(0)
-  userSkill       UserSkill?     @relation(name: "UserSkillToUser", fields: [userSkillId], references: [id])
-  userSkillId     Int?           @unique
-  battlelog       BattleLog?     @relation(name: "UserToBattleLog")
-  battle          Battle?        @relation(name: "UserToBattle")
-  resources       UserResources?
-  inventory       Inventory?
-  RefreshTokens   RefreshToken[]
-  last_active_at  DateTime?      @default(now())
+
+  lvl  Int @default(1)
+  hp   Int @default(300)
+  exp  Int @default(0)
+  mana Int @default(0)
+
+  // ========== НОВЫЕ СТАТЫ ==========
+  attack          Int @default(10) // Базовый урон
+  speed           Int @default(0) // Скорость передвижения/боя (макс 80%)
+  defense         Int @default(0) // Защита, блок урона (макс 95%)
+  maneuverability Int @default(0) // Уворот от атак (макс 70%)
+  luck            Int @default(0) // Шанс критов и улучшенного лута
+  repairSpeed     Int @default(0) // Скорость ремонта в бою (макс 15%)
+  // ===================================
+
+  userSkill      UserSkill?      @relation(name: "UserSkillToUser", fields: [userSkillId], references: [id])
+  userSkillId    Int?            @unique
+  battlelog      BattleLog?      @relation(name: "UserToBattleLog")
+  battle         Battle?         @relation(name: "UserToBattle")
+  resources      UserResources?
+  inventory      Inventory?
+  RefreshTokens  RefreshToken[]
+  last_active_at DateTime?       @default(now())
+  Ship           Ship?
+  UserEquipment  UserEquipment[]
 
   @@map("users")
 }
 
 model Skill {
-  id          Int        @id @default(autoincrement())
-  name        String     @unique
-  description String?
-  type_id     String
-  power       Int //Сила навыка (например, урон или эффективность)
+  id           Int     @id @default(autoincrement())
+  name         String  @unique
+  description  String?
+  type_id      String
+  power        Int
+  cooldown     Int     @default(0)
+  resource     String?
+  resourceCost Int     @default(0)
+
   mobSkill    MobSkill?  @relation(name: "SkillToMobSkill")
   userSkill   UserSkill? @relation(name: "UserSkillToSkill", fields: [userSkillId], references: [id])
   userSkillId Int?       @unique
   battlelog   BattleLog? @relation(name: "SkillToBattleLog")
+  BotSkill    BotSkill[]
 
   @@map("skill")
 }
@@ -256,4 +294,93 @@ model Battle {
   userId       Int?        @unique
 
   @@map("battle")
+}
+
+//Боты и настройки
+model Bot {
+  id         Int        @id @default(autoincrement())
+  type       String // 'simple' | 'merchant' | 'caravan' | 'hunter'
+  name       String
+  health     Int
+  mana       Int        @default(0)
+  level      Int        @default(1)
+  lootValue  Int        @default(0)
+  skills     BotSkill[]
+  created_at DateTime   @default(now())
+}
+
+model BotSkill {
+  id      Int @id @default(autoincrement())
+  botId   Int
+  skillId Int
+  level   Int
+
+  bot   Bot   @relation(fields: [botId], references: [id])
+  skill Skill @relation(fields: [skillId], references: [id])
+}
+
+model Location {
+  id                Int      @id @default(autoincrement())
+  name              String   @unique
+  description       String?
+  requiredLevel     Int      @default(1) // Минимальный уровень игрока
+  requiredShipLevel Int? // Минимальный уровень корабля (опционально)
+  rewardExp         Int      @default(100) // Сколько опыта дается за действия в локации
+  rewardGold        Int      @default(50) // Сколько золота можно получить
+  difficulty        Int      @default(1) // Сложность локации: от 1 (легкая) до 5 (очень тяжелая)
+  created_at        DateTime @default(now())
+
+  @@map("locations")
+}
+
+model Ship {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  name            String   @default("Unnamed Ship")
+  level           Int      @default(1)
+  hp              Int      @default(1000)
+  mana            Int      @default(0)
+  attack          Int      @default(100)
+  speed           Int      @default(0)
+  defense         Int      @default(0)
+  maneuverability Int      @default(0)
+  luck            Int      @default(0)
+  repairSpeed     Int      @default(0)
+  created_at      DateTime @default(now())
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  equipment ShipEquipment[]
+  crew      ShipCrew[]
+
+  @@map("ships")
+}
+
+model ShipEquipment {
+  id           Int    @id @default(autoincrement())
+  shipId       Int
+  type         String
+  bonusAttack  Int    @default(0)
+  bonusSpeed   Int    @default(0)
+  bonusDefense Int    @default(0)
+  bonusDamage  Int    @default(0)
+
+  ship Ship @relation(fields: [shipId], references: [id], onDelete: Cascade)
+
+  @@map("ship_equipment")
+}
+
+model ShipCrew {
+  id               Int    @id @default(autoincrement())
+  shipId           Int
+  role             String
+  bonusHp          Int    @default(0)
+  bonusAttack      Int    @default(0)
+  bonusSpeed       Int    @default(0)
+  bonusDefense     Int    @default(0)
+  bonusLuck        Int    @default(0)
+  bonusRepairSpeed Int    @default(0)
+
+  ship Ship @relation(fields: [shipId], references: [id], onDelete: Cascade)
+
+  @@map("ship_crew")
 }

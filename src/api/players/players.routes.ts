@@ -7,10 +7,10 @@ import PlayersController from './players.controller.js';
 const router = Router();
 
 router.get(
-  '/:id',
-  validateSchema(playerIdSchema, 'params'),
-  validateSchema(playerIncludeSchema, 'query'),
-  PlayersController.player
+    '/:id',
+    validateSchema(playerIdSchema, 'params'),
+    validateSchema(playerIncludeSchema, 'query'),
+    PlayersController.player
 );
 
 export default router;

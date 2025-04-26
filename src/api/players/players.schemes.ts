@@ -8,4 +8,4 @@ const playerIncludeSchema = Joi.object({
     include: Joi.array().optional().items(Joi.string().valid('resources', 'exp', 'inventoryId'))
 });
 
-export { playerIdSchema, playerIncludeSchema }
+export { playerIdSchema, playerIncludeSchema };

@@ -6,6 +6,12 @@ import playersRoutes from './players/players.routes.js';
 import inventoryRoutes from './inventory/inventory.routes.js';
 import statusRoutes from './status/status.routes.js';
 import avatarRoutes from './avatar/avatar.routes.js';
+import locationsRoutes from './locations/locations.routes.js';
+import shipRoutes from './ship/ship.routes.js';
+import shipStatsRoutes from './ship/stats/shipStats.routes.js';
+import equipmentRoutes from './equipment/equipment.routes.js';
+import profileRoutes from './profile/profile.routes.js';
+import topRoutes from './top/top.routes.js';
 
 const router = Router();
 
@@ -17,5 +23,11 @@ router.use('/players', verifyToken, playersRoutes);
 router.use('/inventory', verifyToken, inventoryRoutes);
 router.use('/status', verifyToken, statusRoutes);
 router.use('/avatar', verifyToken, avatarRoutes);
+router.use('/locations', verifyToken, locationsRoutes);
+router.use('/ship', verifyToken, shipRoutes);
+router.use('/', shipStatsRoutes);
+router.use('/equipment', equipmentRoutes);
+router.use('/profile', profileRoutes);
+router.use('/top', topRoutes);
 
 export default router;
