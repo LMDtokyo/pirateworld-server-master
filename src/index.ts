@@ -3,11 +3,13 @@ import 'express-async-errors';
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
 import routes from './api/index.js';
 import errorHandler from './middlewares/error-handler.js';
-
-import prisma from './database/index.js'; // База должна подключаться РАНЬШЕ, чем всё остальное
+import prisma from './database/index.js';
+import socketEmitter from './ecs/helpers/SocketEmitter.js';
 
 const app = express();
 
@@ -20,13 +22,41 @@ app
     .use('/', routes) // Главный роутинг
     .use('*', errorHandler); // Глобальный обработчик ошибок
 
+// Создаём HTTP-сервер на базе Express
+const httpServer = createServer(app);
+
+// Инициализация WebSocket сервера
+const io = new Server(httpServer, {
+  cors: { origin: process.env.CLIENT_URL, credentials: true },
+});
+
+// Привязываем io к SocketEmitter
+socketEmitter.setServer(io);
+
+// Обработка событий подключения пользователей
+io.on('connection', (socket) => {
+  console.log('WebSocket: Пользователь подключился');
+
+  socket.on('register', (userId) => {
+    if (!userId) return;
+    socket.join(`user:${userId}`);
+    console.log(`WebSocket: Пользователь зарегистрирован в комнате user:${userId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('WebSocket: Пользователь отключился');
+  });
+});
+
+// Запуск сервера
 try {
   await prisma.$connect().then(() => console.log(`PRISMA: Успешное подключение к базе данных`));
 
-  await import('./schedule/index.js'); // Планировщики (например, удаление просроченных токенов)
+  await import('./schedule/index.js'); // Планировщики
 
-  app.listen(process.env.HTTP_PORT, () => {
-    console.log('EXPRESS: Сервер запущен, порт:', process.env.HTTP_PORT);
+  const PORT = process.env.HTTP_PORT || 3000;
+  httpServer.listen(PORT, () => {
+    console.log(`HTTP+WebSocket сервер запущен на порту: ${PORT}`);
   });
 } catch (err) {
   console.error('Ошибка запуска сервера:', err);

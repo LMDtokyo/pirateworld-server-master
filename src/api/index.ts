@@ -12,6 +12,8 @@ import shipStatsRoutes from './ship/stats/shipStats.routes.js';
 import equipmentRoutes from './equipment/equipment.routes.js';
 import profileRoutes from './profile/profile.routes.js';
 import topRoutes from './top/top.routes.js';
+import talentsRoutes from './talents/talents.routes.js';
+import passivesRoutes from './talents/passives/passives.routes.js';
 
 const router = Router();
 
@@ -29,5 +31,7 @@ router.use('/', shipStatsRoutes);
 router.use('/equipment', equipmentRoutes);
 router.use('/profile', profileRoutes);
 router.use('/top', topRoutes);
+router.use('/talents', talentsRoutes);
+router.use('/passives', passivesRoutes);
 
 export default router;

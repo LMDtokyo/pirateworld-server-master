@@ -142,18 +142,59 @@ model User {
   repairSpeed     Int @default(0) // Скорость ремонта в бою (макс 15%)
   // ===================================
 
-  userSkill      UserSkill?      @relation(name: "UserSkillToUser", fields: [userSkillId], references: [id])
-  userSkillId    Int?            @unique
-  battlelog      BattleLog?      @relation(name: "UserToBattleLog")
-  battle         Battle?         @relation(name: "UserToBattle")
-  resources      UserResources?
-  inventory      Inventory?
-  RefreshTokens  RefreshToken[]
-  last_active_at DateTime?       @default(now())
-  Ship           Ship?
-  UserEquipment  UserEquipment[]
+  skillPoints    Int       @default(0)
+  last_active_at DateTime? @default(now())
+
+  // Один пользователь -> одна запись Ship
+  Ship Ship?
+
+  // Один пользователь -> много снаряжения, талантов и пассивных умений
+  UserEquipment    UserEquipment[]
+  UserTalent       UserTalent[]
+  UserPassiveSkill UserPassiveSkill[]
+
+  // Один пользователь -> много боевых навыков
+  UserSkills UserSkill[] @relation(name: "UserSkillToUser") // ← Переименовали тут чтобы избежать ошибки
+
+  // Прочие связи
+  battlelog     BattleLog?     @relation(name: "UserToBattleLog")
+  battle        Battle?        @relation(name: "UserToBattle")
+  resources     UserResources?
+  inventory     Inventory?
+  RefreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+model Talent {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+
+  bonusAttack  Int @default(0)
+  bonusDefense Int @default(0)
+  bonusSpeed   Int @default(0)
+  bonusLuck    Int @default(0)
+  bonusMana    Int @default(0)
+
+  specialSkill String? // 🎯 Новый параметр: название особого навыка (если будет)
+
+  userTalents UserTalent[]
+  created_at  DateTime     @default(now())
+
+  @@map("talents")
+}
+
+model UserTalent {
+  id       Int @id @default(autoincrement())
+  userId   Int
+  talentId Int
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  talent Talent @relation(fields: [talentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, talentId])
+  @@map("users_talents")
 }
 
 model Skill {
@@ -166,22 +207,54 @@ model Skill {
   resource     String?
   resourceCost Int     @default(0)
 
-  mobSkill    MobSkill?  @relation(name: "SkillToMobSkill")
-  userSkill   UserSkill? @relation(name: "UserSkillToSkill", fields: [userSkillId], references: [id])
-  userSkillId Int?       @unique
-  battlelog   BattleLog? @relation(name: "SkillToBattleLog")
-  BotSkill    BotSkill[]
+  // Связи
+  mobSkill   MobSkill?   @relation(name: "SkillToMobSkill")
+  userSkills UserSkill[] @relation(name: "UserSkillToSkill") // <-- Сделать это МАССИВОМ, правильно
+  battlelog  BattleLog?  @relation(name: "SkillToBattleLog")
+  BotSkill   BotSkill[]
 
   @@map("skill")
 }
 
+model PassiveSkill {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+
+  bonusResourceDrop Int @default(0) // Бонус к выпадению ресурсов (%)
+  bonusHarpoonCd    Int @default(0) // Снижение кд гарпуна (%)
+  bonusMortarCd     Int @default(0) // Снижение кд мортиры (%)
+
+  userPassiveSkills UserPassiveSkill[]
+
+  created_at DateTime @default(now())
+
+  @@map("passive_skills")
+}
+
+model UserPassiveSkill {
+  id        Int @id @default(autoincrement())
+  userId    Int
+  passiveId Int
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passiveSkill PassiveSkill @relation(fields: [passiveId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, passiveId])
+  @@map("users_passive_skills")
+}
+
 model UserSkill {
-  id      Int    @id @default(autoincrement())
+  id      Int @id @default(autoincrement())
   userId  Int
   skillId Int
-  level   Int
-  skill   Skill? @relation(name: "UserSkillToSkill")
-  user    User?  @relation(name: "UserSkillToUser")
+  level   Int @default(1)
+
+  // Связь к пользователю (многие UserSkill → один User)
+  user User @relation(name: "UserSkillToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Связь к модели Skill (многие UserSkill → один Skill)
+  skill Skill @relation(name: "UserSkillToSkill", fields: [skillId], references: [id], onDelete: Cascade)
 
   @@map("user_skill")
 }
