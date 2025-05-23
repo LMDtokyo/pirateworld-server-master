@@ -11,7 +11,9 @@ class AuthController {
 
     const user = await prisma.user.findUnique({ where: { login } });
 
-    if (!user) return res.status(400).json({ error: 'Неверный логин', error_message: 'Пользователь не найден' });
+    if (!user) {
+      return res.status(400).json({ error: 'Неверный логин', error_message: 'Пользователь не найден' });
+    }
 
     if (!bcrypt.compareSync(password, user.password)) {
       return res.status(400).json({ error: 'Неверный пароль', error_message: 'Неверный пароль' });
@@ -19,7 +21,14 @@ class AuthController {
 
     const tokens = await issueTokens(user.id);
 
-    res.json(tokens);
+    res.json({
+      ...tokens,
+      user: {
+        id: user.id,
+        login: user.login,
+        isAdmin: user.isAdmin // добавлено
+      }
+    });
   }
 
   async signup(req: Request<null, null, { login: string; password: string; email: string }>, res: Response) {
@@ -53,7 +62,14 @@ class AuthController {
 
     const tokens = await issueTokens(newUser.id);
 
-    res.status(201).json(tokens);
+    res.status(201).json({
+      ...tokens,
+      user: {
+        id: newUser.id,
+        login: newUser.login,
+        isAdmin: newUser.isAdmin
+      }
+    });
   }
 
   async refresh(req: Request<null, null, { refresh_token: string }>, res: Response) {
@@ -89,16 +105,17 @@ class AuthController {
   }
 
   async me(req: Request, res: Response) {
-    const { login, email, email_confirmed } = await prisma.user.findUniqueOrThrow({
+    const { login, email, email_confirmed, isAdmin } = await prisma.user.findUniqueOrThrow({
       where: { id: req.jwt.id },
       select: {
         login: true,
         email: true,
-        email_confirmed: true
+        email_confirmed: true,
+        isAdmin: true
       }
     });
 
-    res.json({ id: req.jwt.id, login, email, email_confirmed });
+    res.json({ id: req.jwt.id, login, email, email_confirmed, isAdmin });
   }
 }
 

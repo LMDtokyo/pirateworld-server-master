@@ -1,6 +1,6 @@
 {
   "watch": ["src"],
-  "ext": ".js,.ts",
-  "ignore": [],
-  "exec": "npx ts-node-esm src/index.ts"
+  "ext": "ts",
+  "ignore": ["build"],
+  "exec": "node --loader ts-node/esm src/index.ts"
 }

@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Все предметы — БЕЗ typeId! Мы добавим его потом динамически.
 const items = [
   {
     name: 'm_commanders_pendant',
@@ -28,7 +27,7 @@ const items = [
     description: '-',
     weight: 180,
     sell_price: 190,
-    image: 't_broken_blade.png',
+    image: 'w_broken_blade.gif',
     max_stack_size: 1
   },
   {
@@ -169,37 +168,40 @@ const items = [
 ];
 
 const main = async () => {
-  console.log(`🌴 Start seeding items table.`);
+  console.log(`🌴 Start seeding items with unique item types.`);
 
   await prisma.item.deleteMany();
   await prisma.itemType.deleteMany();
 
-  // Создаём тип и получаем его id
-  const type = await prisma.itemType.create({
-    data: {
-      name: "Основной тип",
-      color: "#ffaa00"
-    }
-  });
+  const createdItems = [];
 
-  // Добавляем typeId каждому предмету
-  const itemsWithType = items.map((item) => ({
-    ...item,
-    typeId: type.id
-  }));
+  for (const item of items) {
+    const type = await prisma.itemType.create({
+      data: {
+        name: `Тип для ${item.label}`,
+        color: '#ffaa00'
+      }
+    });
 
-  await prisma.item.createMany({
-    data: itemsWithType
-  });
+    const createdItem = await prisma.item.create({
+      data: {
+        ...item,
+        typeId: type.id
+      }
+    });
+
+    createdItems.push(createdItem);
+  }
+
+  console.log(`🌴 ${createdItems.length} items created with individual types.`);
 };
 
 main()
-    .then(async () => {
-      await prisma.$disconnect();
-      console.log(`🌴 ${items.length} items have been created.`)
-    })
-    .catch(async (e) => {
-      console.error(e);
-      await prisma.$disconnect();
-      process.exit(1);
-    });
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

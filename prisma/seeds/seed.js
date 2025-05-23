@@ -1,3 +1,3 @@
 // prisma/seeds/seed.js
-import './user.js';
+import './admin.js';
 import './items.js';

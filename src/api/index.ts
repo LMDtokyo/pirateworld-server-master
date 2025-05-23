@@ -14,6 +14,9 @@ import profileRoutes from './profile/profile.routes.js';
 import topRoutes from './top/top.routes.js';
 import talentsRoutes from './talents/talents.routes.js';
 import passivesRoutes from './talents/passives/passives.routes.js';
+import chatRoutes from './chat/index.js';
+import adminRoutes from './admin/index.js';
+
 
 const router = Router();
 
@@ -33,5 +36,8 @@ router.use('/profile', profileRoutes);
 router.use('/top', topRoutes);
 router.use('/talents', talentsRoutes);
 router.use('/passives', passivesRoutes);
+router.use('/chat', verifyToken, chatRoutes);
+router.use('/admin', verifyToken, adminRoutes);
+
 
 export default router;

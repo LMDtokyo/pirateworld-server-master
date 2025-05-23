@@ -5,39 +5,48 @@ import morgan from 'morgan';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import routes from './api/index.js';
 import errorHandler from './middlewares/error-handler.js';
 import prisma from './database/index.js';
 import socketEmitter from './ecs/helpers/SocketEmitter.js';
+import { registerChatHandlers } from './api/chat/chat.socket.js';
+
+// Получаем абсолютный путь до корня проекта
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.resolve(__dirname, '..'); // ← на уровень выше из build/
 
 const app = express();
 
-// Настройки приложения
 app
-    .use(morgan(':remote-addr | :method :url - :status - :response-time ms | :user-agent'))
-    .use(express.json())
-    .use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
-    .use('/public', express.static('public'))
-    .use('/', routes) // Главный роутинг
-    .use('*', errorHandler); // Глобальный обработчик ошибок
+  .use(morgan(':remote-addr | :method :url - :status - :response-time ms | :user-agent'))
+  .use(express.json())
+  .use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
 
-// Создаём HTTP-сервер на базе Express
+  // ⬇️ Маршруты
+  .use('/', routes)
+
+  // ⬇️ Статические файлы (отдаём картинки)
+  .use('/items', express.static(path.join(ROOT_DIR, 'public/items')))
+
+  // ⬇️ Глобальный обработчик ошибок
+  .use('*', errorHandler);
+
 const httpServer = createServer(app);
 
-// Инициализация WebSocket сервера
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CLIENT_URL, credentials: true },
+  cors: { origin: process.env.CLIENT_URL, credentials: true }
 });
 
-// Привязываем io к SocketEmitter
 socketEmitter.setServer(io);
 
-// Обработка событий подключения пользователей
-io.on('connection', (socket) => {
+io.on('connection', socket => {
   console.log('WebSocket: Пользователь подключился');
 
-  socket.on('register', (userId) => {
+  socket.on('register', userId => {
     if (!userId) return;
     socket.join(`user:${userId}`);
     console.log(`WebSocket: Пользователь зарегистрирован в комнате user:${userId}`);
@@ -48,16 +57,19 @@ io.on('connection', (socket) => {
   });
 });
 
-// Запуск сервера
 try {
-  await prisma.$connect().then(() => console.log(`PRISMA: Успешное подключение к базе данных`));
+  await prisma.$connect();
+  console.log(`PRISMA: Успешное подключение к базе данных`);
 
-  await import('./schedule/index.js'); // Планировщики
+  await import('./schedule/index.js');
 
   const PORT = process.env.HTTP_PORT || 3000;
   httpServer.listen(PORT, () => {
     console.log(`HTTP+WebSocket сервер запущен на порту: ${PORT}`);
+    console.log(`🧪 Картинки доступны по адресу: http://localhost:${PORT}/items/<filename>`);
   });
 } catch (err) {
   console.error('Ошибка запуска сервера:', err);
 }
+
+registerChatHandlers(io);

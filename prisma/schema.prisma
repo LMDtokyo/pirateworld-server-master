@@ -126,6 +126,7 @@ model User {
   password        String
   email           String?
   email_confirmed Boolean @default(false)
+  isAdmin         Boolean @default(false)
   avatar_hash     String?
 
   lvl  Int @default(1)
@@ -162,6 +163,8 @@ model User {
   resources     UserResources?
   inventory     Inventory?
   RefreshTokens RefreshToken[]
+  ChatMessage   ChatMessage[]
+  Punishment    Punishment[]
 
   @@map("users")
 }
@@ -456,4 +459,30 @@ model ShipCrew {
   ship Ship @relation(fields: [shipId], references: [id], onDelete: Cascade)
 
   @@map("ship_crew")
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  chatId    String
+  content   String
+  system    Boolean  @default(false)
+  timestamp DateTime @default(now())
+
+  senderId Int
+  sender   User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model Punishment {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  type      String // "ban" | "mute"
+  reason    String
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("punishments")
 }
